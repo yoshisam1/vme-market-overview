@@ -1,1 +1,6 @@
 .env
+.venv
+venv
+data
+.praison
+praisonai-env
