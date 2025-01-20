@@ -4,4 +4,4 @@ venv
 data
 .praison
 praisonai-env
-**/__pycache__/
+*/__pycache__/
