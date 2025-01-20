@@ -19,8 +19,7 @@ pip install -r requirements.txt
 This command will install all the packages listed in the requirements.txt file, which includes all the necessary packages and their versions for this project.
 
 # ISSUES
-Currently sequential processing snowballs previous responses and thus eventually hit token limit (and too long anyways)
-Async implementation using PraisonAI framework only allows 10 concurrent agents
+The Framework does not work well and have limited documentations.
 
 # TO TRY NEXT
 Solution 1:

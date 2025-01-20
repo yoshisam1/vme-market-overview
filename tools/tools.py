@@ -32,7 +32,7 @@ class PDFPlumberTool(BaseModel):
                 
                 # Extract text page by page
                 with open("output.txt", "w", encoding="utf-8") as out_file:
-                    for i, page in enumerate(pdf.pages[:9]): # Maximum 10 concurrent agents running
+                    for i, page in enumerate(pdf.pages): # Maximum 10 concurrent agents running
                         page_text = page.extract_text()
                         page_metadata = {
                             'page_number': i + 1,

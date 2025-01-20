@@ -1,6 +1,6 @@
 from praisonaiagents import PraisonAIAgents
 from agents.agents import Consultant, Analyst, Auditor
-from tasks.tasks import consultation, analysis, report
+from tasks.tasks import consultation, create_report_task
 import asyncio
 
 """
@@ -18,15 +18,22 @@ result = agents.start()
 """
 
 async def main():
+    report_task = await create_report_task()
+    print(report_task)
+
+    """
+    print("hi\n\n")
+
     # Create and start the workflow
-    workflow = PraisonAIAgents(
-        agents=[Analyst, Auditor],
-        tasks= analysis + [report],
-        verbose=3,
-        process="workflow"
+    agents = PraisonAIAgents(
+        agents=[Auditor],
+        tasks= [report_task],
+        verbose=True,
     )
 
-    results = await workflow.astart()
+    results = await agents.start()
+    print(f"Tasks Results: {results}")
+    """
 
 # Run the async main function
 if __name__ == "__main__":
