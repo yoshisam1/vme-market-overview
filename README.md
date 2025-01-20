@@ -1,7 +1,13 @@
 # How to run
-1. Create virtual environment ```bash python -m venv praisonai-env && source praisonai-env/bin/activate```
+1. Create virtual environment 
+```bash
+python -m venv praisonai-env && source praisonai-env/bin/activate
+```
 2. Install packages in requirements.txt
-3. type ```bash python main.py```
+3. type 
+```bash
+python main.py
+```
 
 # STRUCTURE
 app.py will be the finish product' driver
