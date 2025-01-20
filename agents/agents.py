@@ -39,14 +39,13 @@ Analyst = Agent(
     goal="Analyze the given document page by page and present findings",
     backstory="You are a skilled data analyst with expertise in analyzing and interpreting complex data from reports",
     verbose=True,
-    llm="gpt-4o",
+    llm="gpt-4o-mini",
     #tools=[PDFPlumberTool],
     markdown=True,
     #memory=False,
     #max_rpm=100,
     #use_system_prompt=False,
-    #self_reflect=False
-
+    #self_reflect=False,
 )
 
 Auditor = Agent(
