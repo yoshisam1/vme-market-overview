@@ -1,63 +1,10 @@
 import asyncio
-from dotenv import load_dotenv
-from typing import Annotated, List
-from typing_extensions import TypedDict
-from IPython.display import Image, display
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from langchain_openai import ChatOpenAI
-from tools.tools import PDFPlumberTool
-from langchain_core.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field
-import os
 
-# Load environment variables from .env file
-load_dotenv()
+from tools.llm import llm
+from tools.tools import pdf_tool
+from .parsers import SearchResult, input_parser, summary_parser, search_result_list_parser, verification_parser
+from .state import State
 
-# Access the OPENAI_API_KEY
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Define the Pydantic model for structured output
-class InputData(BaseModel):
-    pdf_path: str = Field(description="The path to the PDF file.")
-    query: str = Field(description="The user's query or purpose.")
-class PageSummary(BaseModel):
-    page_number: int = Field(description="The page number of the PDF.")
-    heading_sentence: str = Field(description="A single sentence summarizing the main idea of the page.")
-    key_points: List[str] = Field(description="Three key points summarizing the content.")
-class SearchResult(BaseModel):
-    content: str = Field(description="The relevant information extracted from the summaries.")
-    claimed_page: int = Field(description="The single page where the information originates.")
-class SearchResultList(BaseModel):
-    results: List[SearchResult] = Field(description="A list of search results.")
-class VerificationResult(BaseModel):
-    valid: bool = Field(description="Indicates whether the summary matches the page content.")
-    explanation: str = Field(description="Provides the reason for the validity of the match.")
-
-# Create parsers
-input_parser = PydanticOutputParser(pydantic_object=InputData)
-summary_parser = PydanticOutputParser(pydantic_object=PageSummary)
-search_result_parser = PydanticOutputParser(pydantic_object=SearchResult)
-search_result_list_parser = PydanticOutputParser(pydantic_object=SearchResultList)
-verification_parser = PydanticOutputParser(pydantic_object=VerificationResult)
-
-# Define the state structure
-class State(TypedDict):
-    messages: Annotated[list, add_messages]  # List of messages exchanged in the session
-    pdf_path: str  # Path to the PDF file
-    query: str  # User's query
-    extracted_pages: List[dict]  # Stores extracted page content and metadata
-    summarized_pages: List[PageSummary]  # Stores summaries for each page, now using Pydantic model
-    search_results: List[SearchResult]  # Stores search results as Pydantic models
-    verified_results: List[VerificationResult]  # Stores verified results as Pydantic models
-
-# Initialize LangGraph
-graph_builder = StateGraph(State)
-
-# Initialize the LLM and bind the PDFPlumberTool
-llm = ChatOpenAI(model="gpt-4o-mini")
-pdf_tool = PDFPlumberTool()
-llm_with_tools = llm.bind_tools([pdf_tool])
 
 async def process_input(state: State):
     if not state["messages"]:
@@ -167,7 +114,7 @@ async def search_summaries(state: State):
 
     # Use the LLM to perform the search
     response = await llm.ainvoke([{"role": "user", "content": search_prompt}])
-    # print("Raw search response:", response.content)
+    print("Raw search response:", response.content)
 
     try:
         # Parse the response using Pydantic
@@ -249,63 +196,3 @@ async def verify_results(state: State):
         ],
         "verified_results": verified_results,
     }
-
-
-# Build the graph
-graph_builder.add_node("process_input", process_input)
-graph_builder.add_node("process_pdf", process_pdf)
-graph_builder.add_node("summarize_page", summarize_page)
-graph_builder.add_node("search_summaries", search_summaries)
-graph_builder.add_node("verify_results", verify_results)
-
-graph_builder.add_edge(START, "process_input")
-graph_builder.add_edge("process_input", "process_pdf")
-graph_builder.add_edge("process_pdf", "summarize_page")
-graph_builder.add_edge("summarize_page", "search_summaries")
-graph_builder.add_edge("search_summaries", "verify_results")
-graph_builder.add_edge("verify_results", END)
-
-# Compile the graph
-graph = graph_builder.compile()
-
-
-# Compile the graph
-graph = graph_builder.compile()
-
-# Display the graph structure (optional)
-try:
-    img = Image(graph.get_graph().draw_mermaid_png())
-    display(img)
-except Exception:
-    pass
-
-# Function to stream updates from the graph asynchronously
-# Function to stream updates from the graph asynchronously
-async def astream_graph_updates(user_input: str):
-    initial_state = {
-        "messages": [{"role": "user", "content": user_input}],
-        "pdf_path": "",
-        "query": "",
-        "extracted_pages": [],
-        "summarized_pages": [],
-    }
-    async for event in graph.astream(initial_state):
-        for value in event.values():
-            if "messages" in value:
-                last_message = value["messages"][-1]
-                if isinstance(last_message, dict) and "content" in last_message:
-                    print("Assistant:", last_message["content"])
-
-# Run the chatbot
-if __name__ == "__main__":
-    while True:
-        try:
-            user_input = input("User: ")
-            if user_input.lower() in ["quit", "exit", "q", "bye"]:
-                print("Goodbye!")
-                break
-
-            asyncio.run(astream_graph_updates(user_input))
-        except Exception as e:
-            print(f"Error: {e}")
-            break
