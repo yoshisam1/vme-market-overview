@@ -14,7 +14,7 @@
 
 3. **Run the Application**
     ```bash
-    python main.py
+    streamlit run app.py
     ```
 
 4. **Provide a Prompt When prompted, include the file path and query. For example:**
@@ -43,7 +43,7 @@ project/
 │   ├── __init__.py        # Makes the directory a Python package
 │   ├── logging.py         # Utility functions for logging and debugging
 │   ├── helpers.py         # Any additional helper functions
-└── queries.txt            # Questions to test the box
+├── queries.txt            # Questions to test the box
 └── requirements.txt       # Python dependencies
 ```
 
