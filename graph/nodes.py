@@ -7,29 +7,20 @@ from .state import State
 
 
 async def process_input(state: State):
+    """
+    Extracts the query from user input.
+    Streamlit already provides `pdf_path`, so we no longer extract it.
+    """
     if not state["messages"]:
         raise ValueError("No input provided.")
 
     # Extract the user message
     user_message = state["messages"][-1].content
 
-    # Define the parsing prompt
-    parsing_prompt = (
-        f"You are a helpful assistant. Extract the following details from the user's input:\n\n"
-        f"User Input: \"{user_message}\"\n\n"
-        f"{input_parser.get_format_instructions()}"
-    )
+    if not user_message.strip():
+        raise ValueError("User query is empty.")
 
-    # Use the LLM to extract information
-    response = await llm.ainvoke([{"role": "user", "content": parsing_prompt}])
-
-    # Parse the response
-    try:
-        parsed_data = input_parser.parse(response.content)
-        return {"pdf_path": parsed_data.pdf_path, "query": parsed_data.query}
-    except Exception as e:
-        print(f"Error parsing input: {e}")
-        raise ValueError("Failed to extract PDF path and query.")
+    return {"query": user_message}  # Only return query; Streamlit provides `pdf_path`
 
 def process_pdf(state: State):
     pdf_path = state.get("pdf_path")
@@ -155,6 +146,10 @@ async def verify_results(state: State):
             f"Check the following:\n"
             f"- Does the numerical data match exactly?\n"
             f"- Are qualitative descriptions consistent and supported by the content?\n"
+            f"- Ensure **numbers and currency values are properly formatted**.\n"
+            f"- **No broken words or line breaks in numeric data**.\n"
+            f"- **Preserve all paragraph and list structures correctly**.\n"
+            f"- **Ensure no hallucination or incorrect modifications.**\n\n"
             f"- Ensure there is no hallucination.\n\n"
             f"Respond with the following structure in valid JSON format:\n"
             f"{verification_parser.get_format_instructions()}"

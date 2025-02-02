@@ -43,6 +43,7 @@ project/
 │   ├── __init__.py        # Makes the directory a Python package
 │   ├── logging.py         # Utility functions for logging and debugging
 │   ├── helpers.py         # Any additional helper functions
+└── queries.txt            # Questions to test the box
 └── requirements.txt       # Python dependencies
 ```
 
@@ -187,4 +188,10 @@ OTHER_PROVIDER_KEY = os.getenv("OTHER_PROVIDER_KEY")
 # Initialize the LLM
 llm = ChatOpenAI(model=THE_MODEL, api_key=OTHER_PROVIDER_KEY)
 ```
-
+## Roadmap 🤖
+- Enable Mutli-pdf ingestion
+- Use streamlit selection UI for sentiment choice
+- Allow .docs/.doc/.docx format documents
+- Enable faster inference (try other models and providers)
+- Enable higher throughput
+- Develop login features (to allow private use despite public link)
