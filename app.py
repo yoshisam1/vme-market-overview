@@ -44,63 +44,92 @@ with st.sidebar:
 
     # Upload PDF file
     uploaded_file = st.file_uploader("📂 Upload a PDF file", type=["pdf"])
+    print("DEBUG: Uploaded file widget rendered.")
 
-    # User input query using text_area (unchanged)
+    # User input query using text_area
     query = st.text_area("💬 Enter your query:")
+    print("DEBUG: Query text_area rendered.")
 
     # Analyze button
     analyze_button = st.button("🚀 Analyze Document")
+    print("DEBUG: Analyze button rendered.")
 
 # Display chat history (includes welcome message)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+print("DEBUG: Chat history displayed.")
 
 # Process query when analyze button is clicked
 if analyze_button:
+    print("DEBUG: Analyze button clicked.")
     if uploaded_file is None:
+        print("DEBUG: No file uploaded.")
         st.warning("⚠️ Please upload a PDF file first.")
     elif not query.strip():
+        print("DEBUG: Query is empty.")
         st.warning("⚠️ Please enter a query.")
     else:
+        print("DEBUG: Starting query processing...")
         # Save uploaded file to a temporary location
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(uploaded_file.read())
             pdf_path = tmp_file.name
+            print(f"DEBUG: Temporary PDF file created at: {pdf_path}")
 
         # Display user message in chat container
         st.session_state.messages.append({"role": "user", "content": query})
         with st.chat_message("user"):
             st.markdown(query)
+        print("DEBUG: User message added to chat.")
 
         # Display progress bar inside the sidebar
         with st.sidebar:
             total_steps = 5  # Adjust based on LangGraph pipeline
+            print("DEBUG: Sidebar progress bar section reached.")
 
         # Async function for processing query
         async def process_and_display():
-
-            results = await process_query(pdf_path, query)
+            print("DEBUG: Starting async process_and_display function.")
+            try:
+                results = await process_query(pdf_path, query)
+                print("DEBUG: process_query completed successfully.")
+            except Exception as e:
+                print("DEBUG: Exception during process_query:", e)
+                st.error("An error occurred while processing the query.")
+                return
 
             # Display assistant response in chat container with original formatting
             with st.chat_message("assistant"):
                 response_container = st.empty()
                 response_text = ""
+                print("DEBUG: Beginning to process results for display.")
 
                 for res in results:
+                    print("DEBUG: Processing result:", res)
                     for char in res:
                         response_text += char
-                        if char in {".", "?", "!", "\n"}:  # Update display after full sentence or newline
+                        # Update display after a full sentence or newline
+                        if char in {".", "?", "!", "\n"}:
                             response_container.markdown(response_text)
                             time.sleep(0.05)
 
                 # Ensure final output is correctly formatted
                 response_container.markdown(response_text)
+                print("DEBUG: Final assistant response displayed:", response_text)
 
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": response_text})
+            print("DEBUG: Assistant response added to session state.")
 
             # Clean up temporary file
-            os.unlink(pdf_path)
+            try:
+                os.unlink(pdf_path)
+                print(f"DEBUG: Temporary file {pdf_path} deleted.")
+            except Exception as e:
+                print(f"DEBUG: Error deleting temporary file {pdf_path}:", e)
 
+        # Run the async function
+        print("DEBUG: Running process_and_display coroutine...")
         asyncio.run(process_and_display())
+        print("DEBUG: process_and_display coroutine finished.")
