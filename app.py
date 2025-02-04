@@ -1,9 +1,27 @@
 import streamlit as st
 import asyncio
-from main import process_query
+import logging
 import tempfile
 import os
 import time
+from main import process_query
+
+# Setup logging: write debug messages to a file and also print to console.
+LOG_FILENAME = "debug.log"
+logging.basicConfig(
+    filename=LOG_FILENAME,
+    filemode="w",
+    format="%(asctime)s %(levelname)s: %(message)s",
+    level=logging.DEBUG,
+)
+logger = logging.getLogger()
+
+# Optionally, also add a StreamHandler to output logs to stdout.
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
+logger.addHandler(console_handler)
+
+logger.info("Starting the Streamlit app.")
 
 WELCOME_MESSAGE = """  
 ### 📌 Hi, VME Members!  
@@ -41,72 +59,71 @@ if "messages" not in st.session_state:
 # Sidebar for user input
 with st.sidebar:
     st.header("🔍 Document Analysis")
-
-    # Upload PDF file
     uploaded_file = st.file_uploader("📂 Upload a PDF file", type=["pdf"])
-    print("DEBUG: Uploaded file widget rendered.")
-
-    # User input query using text_area
+    logger.debug("File uploader rendered.")
+    
     query = st.text_area("💬 Enter your query:")
-    print("DEBUG: Query text_area rendered.")
-
-    # Analyze button
+    logger.debug("Query text area rendered.")
+    
     analyze_button = st.button("🚀 Analyze Document")
-    print("DEBUG: Analyze button rendered.")
+    logger.debug("Analyze button rendered.")
 
 # Display chat history (includes welcome message)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-print("DEBUG: Chat history displayed.")
+logger.debug("Chat history displayed.")
+
+# Optionally, add a button to download the debug log (for troubleshooting)
+if st.sidebar.button("Download Debug Log"):
+    if os.path.exists(LOG_FILENAME):
+        with open(LOG_FILENAME, "r") as f:
+            st.download_button("Download Log", f.read(), file_name=LOG_FILENAME)
+    else:
+        st.write("No debug log available.")
 
 # Process query when analyze button is clicked
 if analyze_button:
-    print("DEBUG: Analyze button clicked.")
+    logger.info("Analyze button clicked.")
     if uploaded_file is None:
-        print("DEBUG: No file uploaded.")
+        logger.warning("No file uploaded.")
         st.warning("⚠️ Please upload a PDF file first.")
     elif not query.strip():
-        print("DEBUG: Query is empty.")
+        logger.warning("Query is empty.")
         st.warning("⚠️ Please enter a query.")
     else:
-        print("DEBUG: Starting query processing...")
+        logger.info("Starting query processing.")
         # Save uploaded file to a temporary location
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(uploaded_file.read())
             pdf_path = tmp_file.name
-            print(f"DEBUG: Temporary PDF file created at: {pdf_path}")
+            logger.debug(f"Temporary PDF file created at: {pdf_path}")
 
         # Display user message in chat container
         st.session_state.messages.append({"role": "user", "content": query})
         with st.chat_message("user"):
             st.markdown(query)
-        print("DEBUG: User message added to chat.")
-
-        # Display progress bar inside the sidebar
-        with st.sidebar:
-            total_steps = 5  # Adjust based on LangGraph pipeline
-            print("DEBUG: Sidebar progress bar section reached.")
+        logger.debug("User message added to chat.")
 
         # Async function for processing query
         async def process_and_display():
-            print("DEBUG: Starting async process_and_display function.")
+            logger.info("Starting async process_and_display function.")
             try:
                 results = await process_query(pdf_path, query)
-                print("DEBUG: process_query completed successfully.")
+                logger.info("process_query completed successfully.")
             except Exception as e:
-                print("DEBUG: Exception during process_query:", e)
+                logger.error("Exception during process_query", exc_info=True)
                 st.error("An error occurred while processing the query.")
                 return
 
-            # Display assistant response in chat container with original formatting
+            # Display assistant response in chat container
             with st.chat_message("assistant"):
                 response_container = st.empty()
                 response_text = ""
-                print("DEBUG: Beginning to process results for display.")
+                logger.debug("Beginning to process results for display.")
 
                 for res in results:
-                    print("DEBUG: Processing result:", res)
+                    logger.debug(f"Processing result: {res}")
                     for char in res:
                         response_text += char
                         # Update display after a full sentence or newline
@@ -114,22 +131,20 @@ if analyze_button:
                             response_container.markdown(response_text)
                             time.sleep(0.05)
 
-                # Ensure final output is correctly formatted
                 response_container.markdown(response_text)
-                print("DEBUG: Final assistant response displayed:", response_text)
+                logger.debug(f"Final assistant response displayed: {response_text}")
 
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": response_text})
-            print("DEBUG: Assistant response added to session state.")
+            logger.info("Assistant response added to session state.")
 
             # Clean up temporary file
             try:
                 os.unlink(pdf_path)
-                print(f"DEBUG: Temporary file {pdf_path} deleted.")
+                logger.debug(f"Temporary file {pdf_path} deleted.")
             except Exception as e:
-                print(f"DEBUG: Error deleting temporary file {pdf_path}:", e)
+                logger.error(f"Error deleting temporary file {pdf_path}:", exc_info=True)
 
-        # Run the async function
-        print("DEBUG: Running process_and_display coroutine...")
+        logger.info("Running process_and_display coroutine...")
         asyncio.run(process_and_display())
-        print("DEBUG: process_and_display coroutine finished.")
+        logger.info("process_and_display coroutine finished.")
