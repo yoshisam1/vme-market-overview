@@ -5,7 +5,7 @@ from langchain_core.callbacks import (
 )
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-import pdfplumber
+import pdfplumber, re
 
 
 # Define input schema for the tool
@@ -156,6 +156,42 @@ class PDFPlumberTool(BaseTool):
         """
         return self._run(pdf_path, run_manager=run_manager.get_sync())
 
+class TextNormalizer:
+    """
+    A utility class for normalizing text formatting issues.
+    Ensures:
+    - Proper number formatting
+    - Removal of unnecessary newlines
+    - Correct spacing between words and numbers
+    """
+
+    @staticmethod
+    def normalize(text: str) -> str:
+        """
+        Cleans and normalizes text by:
+        - Fixing broken number formatting
+        - Removing unnecessary line breaks
+        - Ensuring correct word spacing
+        - Correcting broken words like "b i l l i o n"
+        """
+        if not text:
+            return ""
+
+        # Fix broken commas in numbers
+        text = re.sub(r"(\d+),\s*\n(\d+)", r"\1,\2", text)  
+
+        # Fix numbers broken by newlines
+        text = re.sub(r"(\d+)\s*\n(\d+)", r"\1\2", text)    
+
+        # Remove unintended newlines
+        text = re.sub(r"\s*\n\s*", " ", text)               
+
+        # Fix cases where "b i l l i o n" is incorrectly spaced
+        text = re.sub(r"\b(\w) (\w) (\w) (\w) (\w) (\w) (\w)\b", r"\1\2\3\4\5\6\7", text)
+
+        return text.strip()
+
+normalizer_tool = TextNormalizer()
 pdf_tool = PDFPlumberTool()
 
 
