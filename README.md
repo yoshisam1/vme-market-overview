@@ -195,3 +195,7 @@ llm = ChatOpenAI(model=THE_MODEL, api_key=OTHER_PROVIDER_KEY)
 - Enable faster inference (try other models and providers)
 - Enable higher throughput
 - Develop login features (to allow private use despite public link)
+
+### Appendix/Resources
+https://github.com/mkhorasani/Streamlit-Authenticator
+https://github.com/GauriSP10/streamlit_login_auth_ui

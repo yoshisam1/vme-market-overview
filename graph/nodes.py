@@ -1,7 +1,7 @@
 import asyncio
 
 from tools.llm import llm
-from tools.tools import pdf_tool
+from tools.tools import pdf_tool, normalizer_tool
 from .parsers import SearchResult, input_parser, summary_parser, search_result_list_parser, verification_parser
 from .state import State
 
@@ -136,7 +136,7 @@ async def verify_results(state: State):
         if not matching_page:
             return None  # If no matching page is found, skip verification
 
-        raw_content = matching_page["content"]
+        raw_content = normalizer_tool.normalize(matching_page["content"])
 
         # Define the strict verification prompt
         verification_prompt = (
@@ -161,10 +161,11 @@ async def verify_results(state: State):
         try:
             # Parse the verification response
             verification_result = verification_parser.parse(response.content)
+            cleaned_content = normalizer_tool.normalize(content)  # Final cleanup
 
             if verification_result.valid:
                 return {
-                    "content": content,
+                    "content": cleaned_content,
                     "source": f"Page {claimed_page}",
                     "explanation": verification_result.explanation,
                 }
