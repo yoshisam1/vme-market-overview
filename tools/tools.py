@@ -12,7 +12,6 @@ import pdfplumber, re
 class PDFPlumberInput(BaseModel):
     pdf_path: str = Field(description="Path to the PDF file to process")
 
-
 class PDFPlumberTool(BaseTool):
     name: str = "PDFPlumberTool"
     description: str = "Extract text and metadata from PDF documents using PDFPlumber."

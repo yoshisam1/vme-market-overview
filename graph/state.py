@@ -6,7 +6,8 @@ from langgraph.graph.message import add_messages
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    pdf_path: str
+    pdf_paths: List[str]
+    uploaded_files: List[str]
     query: str
     extracted_pages: List[dict]
     summarized_pages: List[PageSummary]

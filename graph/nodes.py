@@ -23,32 +23,45 @@ async def process_input(state: State):
     return {"query": user_message}  # Only return query; Streamlit provides `pdf_path`
 
 def process_pdf(state: State):
-    pdf_path = state.get("pdf_path")
-    if not pdf_path:
-        raise ValueError("PDF path not found.")
+    pdf_paths = state.get("pdf_paths")
+    uploaded_files = state.get("uploaded_files")  # Store user filenames
 
-    # Use the PDF tool to extract the pages
-    pdf_result = pdf_tool.invoke({"pdf_path": pdf_path})
-    pages = pdf_result.get("pages", [])
+    if not pdf_paths or not isinstance(pdf_paths, list):
+        raise ValueError("No PDF paths found.")
+    if not uploaded_files or not isinstance(uploaded_files, list):
+        raise ValueError("No uploaded filenames found.")
 
-    # Attach both content and page number for processing
-    extracted_pages = [
-        {"page_number": page["page_number"], "content": page["content"]}
-        for page in pages
-    ]
+    extracted_pages = []
+
+    for pdf_path, uploaded_file in zip(pdf_paths, uploaded_files):
+        document_name = uploaded_file.name
+        # Extract pages
+        pdf_result = pdf_tool.invoke({"pdf_path": pdf_path})
+        pages = pdf_result.get("pages", [])
+
+        # Store extracted pages with correct document names
+        for page in pages:
+            extracted_pages.append({
+                "document_name": document_name,  # ✅ Correct filename
+                "page_number": page["page_number"],
+                "content": page["content"]
+            })
+
     return {"extracted_pages": extracted_pages}
 
 async def summarize_page(state: State):
     async def summarize(page_data):
         """Helper function to invoke LLM asynchronously for summarization."""
+        document_name = page_data["document_name"]  # ✅ Preserve document name
         page_number = page_data["page_number"]
         content = page_data["content"]
 
         # Define the prompt
         prompt = (
-            f"You are an advanced document summarizer. Summarize the following content from page {page_number} of a document. "
-            "Your summary should have a heading sentence and three key points. Ensure that at least one of the points is qualitative "
-            "and one is quantitative. Each point should reflect significant facts or insights and be concise. Below is the content for summarization:\n\n"
+            f"You are an advanced document summarizer. Summarize the following content from page {page_number} "
+            f"of the document '{document_name}'. Your summary should have a heading sentence and three key points. "
+            "Ensure that at least one of the points is qualitative and one is quantitative. Each point should reflect "
+            "significant facts or insights and be concise.\n\n"
             f'"{content}"\n\n'
             "Please respond using the following structure in valid JSON format:\n"
             f"{summary_parser.get_format_instructions()}"
@@ -56,21 +69,20 @@ async def summarize_page(state: State):
 
         # Invoke the LLM and parse the response
         response = await llm.ainvoke([{"role": "user", "content": prompt}])
-        return summary_parser.parse(response.content)
+        parsed_summary = summary_parser.parse(response.content)
+
+        # ✅ Return with `document_name` included
+        return {
+            "document_name": document_name,  # ✅ Fix: Preserve document name
+            "page_number": parsed_summary.page_number,
+            "heading_sentence": parsed_summary.heading_sentence,
+            "key_points": parsed_summary.key_points,
+        }
 
     # Summarize all pages concurrently
     tasks = [summarize(page_data) for page_data in state["extracted_pages"]]
-    summaries = await asyncio.gather(*tasks)
+    summarized_pages = await asyncio.gather(*tasks)
 
-    # Prepare summarized pages
-    summarized_pages = [
-        {
-            "page_number": summary.page_number,
-            "heading_sentence": summary.heading_sentence,
-            "key_points": summary.key_points,
-        }
-        for summary in summaries
-    ]
     return {"summarized_pages": summarized_pages}
 
 async def search_summaries(state: State):
@@ -82,9 +94,9 @@ async def search_summaries(state: State):
     if not summaries:
         raise ValueError("Summaries not found.")
 
-    # Combine summaries into a text block
+    # ✅ Ensure document names are included in the summaries
     concatenated_summaries = "\n\n".join(
-        f"Page {summary['page_number']}:\n"
+        f"📄 **Document: {summary['document_name']}** | Page {summary['page_number']}:\n"
         f"- **Heading Sentence**: {summary['heading_sentence']}\n"
         f"- **Key Points**:\n"
         f"  1. {summary['key_points'][0]}\n"
@@ -95,22 +107,37 @@ async def search_summaries(state: State):
 
     # Define the search prompt
     search_prompt = (
-        f"The following are summaries from a document:\n\n"
+        f"The following are summaries from multiple documents:\n\n"
         f"{concatenated_summaries}\n\n"
         f"Based on the query: \"{query}\", extract the top 10 relevant points from the summary. "
-        f"Each point should be associated with exactly one page number as its source. "
+        f"Each point should be associated with exactly one document name and page number as its source. "
         f"Please respond using the following structure in valid JSON format:\n"
         f"{search_result_list_parser.get_format_instructions()}"
     )
 
     # Use the LLM to perform the search
     response = await llm.ainvoke([{"role": "user", "content": search_prompt}])
-    print("Raw search response:", response.content)
 
     try:
-        # Parse the response using Pydantic
+        # ✅ Parse the response using Pydantic
         parsed_results = search_result_list_parser.parse(response.content)
-        return {"search_results": parsed_results.results}
+
+        # ✅ Attach the correct `document_name` to each search result
+        enriched_results = []
+        for result in parsed_results.results:
+            matching_summary = next(
+                (s for s in summaries if s["page_number"] == result.claimed_page), None
+            )
+            if matching_summary:
+                result_data = {
+                    "document_name": matching_summary["document_name"],  # ✅ Add document name
+                    "content": result.content,
+                    "claimed_page": result.claimed_page,
+                }
+                enriched_results.append(result_data)
+
+        return {"search_results": enriched_results}
+
     except Exception as e:
         print(f"Error parsing search results: {e}")
         raise ValueError("Failed to parse search results.")
@@ -124,34 +151,31 @@ async def verify_results(state: State):
     if not extracted_pages:
         raise ValueError("No extracted pages to verify against.")
 
-    async def verify(result: SearchResult):
-        claimed_page = result.claimed_page
-        content = result.content
+    async def verify(result):
+        document_name = result["document_name"]  # ✅ Access `document_name`
+        claimed_page = result["claimed_page"]
+        content = result["content"]
 
         # Find the matching page in extracted_pages
         matching_page = next(
-            (page for page in extracted_pages if page["page_number"] == claimed_page),
+            (page for page in extracted_pages if page["page_number"] == claimed_page and page["document_name"] == document_name),
             None
         )
         if not matching_page:
             return None  # If no matching page is found, skip verification
 
-        raw_content = normalizer_tool.normalize(matching_page["content"])
+        raw_content = matching_page["content"]
 
-        # Define the strict verification prompt
+        # Define the verification prompt
         verification_prompt = (
-            f"Does the following summary originate from the content of Page {claimed_page}?\n\n"
+            f"Does the following summary originate from the content of Page {claimed_page} in the document '{document_name}'?\n\n"
             f"Summary:\n{content}\n\n"
             f"Page {claimed_page} Content:\n{raw_content}\n\n"
             f"Check the following:\n"
             f"- Does the numerical data match exactly?\n"
             f"- Are qualitative descriptions consistent and supported by the content?\n"
-            f"- Ensure **numbers and currency values are properly formatted**.\n"
-            f"- **No broken words or line breaks in numeric data**.\n"
-            f"- **Preserve all paragraph and list structures correctly**.\n"
-            f"- **Ensure no hallucination or incorrect modifications.**\n\n"
-            f"- Ensure there is no hallucination.\n\n"
-            f"Respond with the following structure in valid JSON format:\n"
+            f"- Ensure no hallucination.\n\n"
+            f"Respond using valid JSON format:\n"
             f"{verification_parser.get_format_instructions()}"
         )
 
@@ -161,16 +185,15 @@ async def verify_results(state: State):
         try:
             # Parse the verification response
             verification_result = verification_parser.parse(response.content)
-            cleaned_content = normalizer_tool.normalize(content)  # Final cleanup
 
             if verification_result.valid:
                 return {
-                    "content": cleaned_content,
-                    "source": f"Page {claimed_page}",
+                    "content": content,
+                    "source": f"📄 {document_name} | Page {claimed_page}",
                     "explanation": verification_result.explanation,
                 }
         except Exception as e:
-            print(f"Error parsing verification result for Page {claimed_page}: {e}")
+            print(f"Error parsing verification result for {document_name} Page {claimed_page}: {e}")
         return None
 
     # Verify all search results asynchronously
