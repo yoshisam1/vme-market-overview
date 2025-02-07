@@ -25,7 +25,7 @@ If you're new, follow this **quick guide** to get the best results.
 🚫 **Avoid number-heavy PDFs** (e.g., financial statements with lots of tables).  
 📊 **Annual Reports:** To improve accuracy, remove appendices or large data tables before uploading.  
 
-Happy analyzing! 🎯  
+Happy analyzing VME! 🎯  
 """
 
 # Set Streamlit page config
