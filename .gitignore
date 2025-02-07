@@ -10,3 +10,4 @@ dump.py
 trial.py
 trial.ipynb
 __pycache__
+.streamlit/secrets.toml
