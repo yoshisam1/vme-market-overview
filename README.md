@@ -26,25 +26,26 @@
 ## Project Structure 🗂️
 ```bash
 project/
-├── main.py                # Entry point of the application
-├── .env.example           # Example of where all API keys and passswords are (create own .env)
-├── .env                   # Actual API keys and passwords
-├── .gitignore             # Things to ignore in git (dependencies, caches, etc.)
+├── .streamlit/
+│   ├── secrets.toml                # Where you should put the API keys
+│   ├── secrets.toml.example        # Example on how to make the secrets.toml file
+├── main.py                         # Entry point of the application
+├── .gitignore                      # Things to ignore in git (dependencies, caches, etc.)
 ├── graph/
-│   ├── __init__.py        # Makes the directory a Python package
-│   ├── nodes.py           # Contains the node definitions (process_input, process_pdf, etc.)
-│   ├── state.py           # Defines the `State` TypedDict and related shared structures
-│   ├── parsers.py         # Contains all Pydantic models and parsers
+│   ├── __init__.py                 # Makes the directory a Python package
+│   ├── nodes.py                    # Contains the node definitions (process_input, process_pdf  , etc.)
+│   ├── state.py                    # Defines the `State` TypedDict and related shared structures
+│   ├── parsers.py                  # Contains all Pydantic models and parsers
 ├── tools/
-│   ├── __init__.py        # Makes the directory a Python package
-│   ├── tools.py           # Contains the PDFPlumberTool logic
-│   ├── llm.py             # Contains LLM initialization logic (e.g., ChatOpenAI setup)
+│   ├── __init__.py                 # Makes the directory a Python package
+│   ├── tools.py                    # Contains the PDFPlumberTool logic
+│   ├── llm.py                      # Contains LLM initialization logic (e.g., ChatOpenAI setup)
 ├── utils/
-│   ├── __init__.py        # Makes the directory a Python package
-│   ├── logging.py         # Utility functions for logging and debugging
-│   ├── helpers.py         # Any additional helper functions
-├── queries.txt            # Questions to test the box
-└── requirements.txt       # Python dependencies
+│   ├── __init__.py                 # Makes the directory a Python package
+│   ├── logging.py                  # Utility functions for logging and debugging
+│   ├── helpers.py                  # Any additional helper functions
+├── queries.txt                     # Questions to test the box
+└── requirements.txt                # Python dependencies
 ```
 
 ## Adding Nodes 🛠️

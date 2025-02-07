@@ -1,9 +1,7 @@
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-import os
+import streamlit as st
 
-load_dotenv()
+OPENAI_API_KEY = st.secrets["openai"]["OPENAI_API_KEY"]
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(api_key=OPENAI_API_KEY, model="gpt-4o-mini")
