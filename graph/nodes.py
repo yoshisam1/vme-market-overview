@@ -164,8 +164,7 @@ async def verify_results(state: State):
         if not matching_page:
             return None  # If no matching page is found, skip verification
 
-        raw_content = matching_page["content"]
-
+        raw_content = normalizer_tool.normalize(matching_page["content"])
         # Define the verification prompt
         verification_prompt = (
             f"Does the following summary originate from the content of Page {claimed_page} in the document '{document_name}'?\n\n"
@@ -185,10 +184,11 @@ async def verify_results(state: State):
         try:
             # Parse the verification response
             verification_result = verification_parser.parse(response.content)
+            cleaned_content = normalizer_tool.normalize(content) 
 
             if verification_result.valid:
                 return {
-                    "content": content,
+                    "content": cleaned_content,
                     "source": f"📄 {document_name} | Page {claimed_page}",
                     "explanation": verification_result.explanation,
                 }
