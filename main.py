@@ -24,13 +24,19 @@ graph_builder.add_edge("verify_results", END)
 # Compile the graph
 graph = graph_builder.compile()
 
+# ✅ **Updated Function to Handle Multiple PDFs**
+async def process_query(pdf_paths: list, uploaded_filenames: list[str], user_query: str):
+    """Handles the processing of multiple PDF files with a user query."""
+    """Handles the processing of multiple PDF files with their original filenames."""
+    if not pdf_paths or not isinstance(pdf_paths, list):
+        raise ValueError("No PDF paths provided.")
+    if not uploaded_filenames or not isinstance(uploaded_filenames, list):
+        raise ValueError("No uploaded filenames provided.")
 
-# Function to process the document and query asynchronously
-async def process_query(pdf_path: str, user_query: str):
-    """Handles the processing of a PDF file with a user query."""
     initial_state = {
         "messages": [{"role": "user", "content": user_query}],
-        "pdf_path": pdf_path,
+        "pdf_paths": pdf_paths,  # ✅ Updated to accept a list of PDF paths
+        "uploaded_files": uploaded_filenames,
         "query": user_query,
         "extracted_pages": [],
         "summarized_pages": [],
@@ -59,8 +65,8 @@ if __name__ == "__main__":
                 break
 
             # Run asynchronously in CLI
-            pdf_path = input("Enter PDF file path: ")
-            results = asyncio.run(process_query(pdf_path, user_input))
+            pdf_paths = input("Enter PDF file paths (comma-separated): ").split(",")
+            results = asyncio.run(process_query(pdf_paths, user_input))
 
             for res in results:
                 print(f"Assistant: {res}")

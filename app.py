@@ -42,47 +42,46 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("🔍 Document Analysis")
 
-    # Upload PDF file
-    uploaded_file = st.file_uploader("📂 Upload a PDF file", type=["pdf"])
+    # Allow multiple file uploads
+    uploaded_files = st.file_uploader("📂 Upload PDF files", type=["pdf"], accept_multiple_files=True)
 
-    # User input query using text_area (unchanged)
+    # User input query
     query = st.text_area("💬 Enter your query:")
 
     # Analyze button
-    analyze_button = st.button("🚀 Analyze Document")
+    analyze_button = st.button("🚀 Analyze Documents")
 
-# Display chat history (includes welcome message)
+# ✅ **Render Chat History Before Processing**
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(message["content"])  # Ensure messages are displayed
 
 # Process query when analyze button is clicked
 if analyze_button:
-    if uploaded_file is None:
-        st.warning("⚠️ Please upload a PDF file first.")
+    if not uploaded_files:
+        st.warning("⚠️ Please upload at least one PDF file.")
     elif not query.strip():
         st.warning("⚠️ Please enter a query.")
     else:
-        # Save uploaded file to a temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            pdf_path = tmp_file.name
+        pdf_paths = []
+        uploaded_filenames = []  # Store original filenames
 
-        # Display user message in chat container
+        for uploaded_file in uploaded_files:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                tmp_file.write(uploaded_file.read())
+                pdf_paths.append(tmp_file.name)
+                uploaded_filenames.append(uploaded_file)  # Store file object
+
+        # Display user message in chat
         st.session_state.messages.append({"role": "user", "content": query})
         with st.chat_message("user"):
             st.markdown(query)
 
-        # Display progress bar inside the sidebar
-        with st.sidebar:
-            total_steps = 5  # Adjust based on LangGraph pipeline
-
         # Async function for processing query
         async def process_and_display():
+            # ✅ Only pass `pdf_paths`, not a dictionary
+            results = await process_query(pdf_paths, uploaded_filenames, query)
 
-            results = await process_query(pdf_path, query)
-
-            # Display assistant response in chat container with original formatting
             with st.chat_message("assistant"):
                 response_container = st.empty()
                 response_text = ""
@@ -90,17 +89,13 @@ if analyze_button:
                 for res in results:
                     for char in res:
                         response_text += char
-                        if char in {".", "?", "!", "\n"}:  # Update display after full sentence or newline
+                        if char in {".", "?", "!", "\n"}:
                             response_container.markdown(response_text)
                             time.sleep(0.05)
 
-                # Ensure final output is correctly formatted
                 response_container.markdown(response_text)
 
-            # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": response_text})
 
-            # Clean up temporary file
-            os.unlink(pdf_path)
-
         asyncio.run(process_and_display())
+

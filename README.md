@@ -191,6 +191,7 @@ llm = ChatOpenAI(model=THE_MODEL, api_key=OTHER_PROVIDER_KEY)
 ## Roadmap 🤖
 - Enable Mutli-pdf ingestion
 - Use streamlit selection UI for sentiment choice
+- Query guard to not make it error
 - Allow .docs/.doc/.docx format documents
 - Enable faster inference (try other models and providers)
 - Enable higher throughput
