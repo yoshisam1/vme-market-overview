@@ -4,6 +4,18 @@ from graph import State
 from tools import llm, pdf_tool
 from langgraph.graph import StateGraph, START, END
 
+def route_based_on_input(state: State) -> str:
+    if state.get("input_valid"):
+        return "process_pdf"
+    else:
+        # ❌ If gibberish detected, return an error message and end execution
+        state["messages"].append({
+            "role": "assistant",
+            "content": "⚠️ Your query seems unclear or gibberish. Please rephrase it and try again."
+        })
+        return END  # ✅ Directly go to END to avoid infinite loop
+
+
 # Initialize LangGraph
 graph_builder = StateGraph(State)
 
@@ -15,7 +27,7 @@ graph_builder.add_node("search_summaries", search_summaries)
 graph_builder.add_node("verify_results", verify_results)
 
 graph_builder.add_edge(START, "process_input")
-graph_builder.add_edge("process_input", "process_pdf")
+graph_builder.add_conditional_edges("process_input", route_based_on_input)
 graph_builder.add_edge("process_pdf", "summarize_page")
 graph_builder.add_edge("summarize_page", "search_summaries")
 graph_builder.add_edge("search_summaries", "verify_results")

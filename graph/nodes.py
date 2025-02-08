@@ -5,22 +5,48 @@ from tools.tools import pdf_tool, normalizer_tool
 from .parsers import SearchResult, input_parser, summary_parser, search_result_list_parser, verification_parser
 from .state import State
 
+import asyncio
+import logging
+from tools.llm import llm
+from tools.tools import pdf_tool, normalizer_tool
+from .parsers import SearchResult, input_parser, summary_parser, search_result_list_parser, verification_parser
+from .state import State
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 
 async def process_input(state: State):
     """
     Extracts the query from user input.
-    Streamlit already provides `pdf_path`, so we no longer extract it.
+    Checks if input is gibberish using LLM before continuing.
     """
     if not state["messages"]:
         raise ValueError("No input provided.")
 
     # Extract the user message
-    user_message = state["messages"][-1].content
+    user_message = state["messages"][-1].content.strip()
 
     if not user_message.strip():
         raise ValueError("User query is empty.")
 
-    return {"query": user_message}  # Only return query; Streamlit provides `pdf_path`
+    # ✅ Check if input is gibberish using LLM
+    validation_prompt = (
+        f"You are an AI input validator. Determine if the following user input is meaningful:\n\n"
+        f"User Input: \"{user_message}\"\n\n"
+        f"Respond with ONLY `valid` or `gibberish`."
+    )
+
+    response = await llm.ainvoke([{"role": "user", "content": validation_prompt}])
+    is_valid = "valid" in response.content.lower()
+
+    if not is_valid:
+        logging.warning(f"🚨 Gibberish input detected: {user_message}")  # ✅ Log to terminal
+        state["messages"].append({"role": "assistant", "content": "⚠️ Your query seems unclear. Please refine and try again."})
+        return {"messages": state["messages"], "input_valid": False}  # ✅ Pass `input_valid = False` to routing
+
+    return {"query": user_message, "input_valid": True}
+
 
 def process_pdf(state: State):
     pdf_paths = state.get("pdf_paths")
@@ -205,9 +231,12 @@ async def verify_results(state: State):
 
     # Present the verified results
     formatted_results = "\n\n".join(
-        f"{result['content']} (Source: {result['source']})"
+        f"💡 **Info:** {result['content']}  \n"
+        f"🔍 **Source:** {result['source']}  \n"
+        f"📌 **Reasoning:** {result['explanation']}"
         for result in verified_results
     )
+
 
     return {
         "messages": [

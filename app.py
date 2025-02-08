@@ -2,7 +2,6 @@ import streamlit as st
 import asyncio
 from main import process_query
 import tempfile
-import os
 import time
 
 WELCOME_MESSAGE = """  
@@ -79,7 +78,6 @@ if analyze_button:
 
         # Async function for processing query
         async def process_and_display():
-            # ✅ Only pass `pdf_paths`, not a dictionary
             results = await process_query(pdf_paths, uploaded_filenames, query)
 
             with st.chat_message("assistant"):
