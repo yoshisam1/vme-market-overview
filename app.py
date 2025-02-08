@@ -45,7 +45,7 @@ with st.sidebar:
     uploaded_files = st.file_uploader("📂 Upload PDF files", type=["pdf"], accept_multiple_files=True)
 
     # User input query
-    query = st.text_area("💬 Enter your query:")
+    query = st.text_area("💬 Enter your query:", max_chars=75)
 
     # Analyze button
     analyze_button = st.button("🚀 Analyze Documents")
