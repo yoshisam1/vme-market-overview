@@ -2,7 +2,6 @@ import streamlit as st
 import asyncio
 from main import process_query
 import tempfile
-import os
 import time
 
 WELCOME_MESSAGE = """  
@@ -46,7 +45,7 @@ with st.sidebar:
     uploaded_files = st.file_uploader("📂 Upload PDF files", type=["pdf"], accept_multiple_files=True)
 
     # User input query
-    query = st.text_area("💬 Enter your query:")
+    query = st.text_area("💬 Enter your query:", max_chars=75)
 
     # Analyze button
     analyze_button = st.button("🚀 Analyze Documents")
@@ -79,7 +78,6 @@ if analyze_button:
 
         # Async function for processing query
         async def process_and_display():
-            # ✅ Only pass `pdf_paths`, not a dictionary
             results = await process_query(pdf_paths, uploaded_filenames, query)
 
             with st.chat_message("assistant"):
