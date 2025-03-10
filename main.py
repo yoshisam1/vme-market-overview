@@ -8,11 +8,6 @@ def route_based_on_input(state: State) -> str:
     if state.get("input_valid"):
         return "process_pdf"
     else:
-        # ❌ If gibberish detected, return an error message and end execution
-        state["messages"].append({
-            "role": "assistant",
-            "content": "⚠️ Your query seems unclear or gibberish. Please rephrase it and try again."
-        })
         return END  # ✅ Directly go to END to avoid infinite loop
 
 
