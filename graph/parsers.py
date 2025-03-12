@@ -8,12 +8,14 @@ class InputData(BaseModel):
     pdf_path: str = Field(description="The path to the PDF file.")
     query: str = Field(description="The user's query or purpose.")
 class PageSummary(BaseModel):
+    document_name: str = Field(description="The name of the document.")
     page_number: int = Field(description="The page number of the PDF.")
     heading_sentence: str = Field(description="A single sentence summarizing the main idea of the page.")
     key_points: List[str] = Field(description="Three key points summarizing the content.")
 class SearchResult(BaseModel):
-    content: str = Field(description="The relevant information extracted from the summaries.")
+    document_name: str = Field(description="The name of the document.")
     claimed_page: int = Field(description="The single page where the information originates.")
+    content: str = Field(description="The relevant information extracted from the summaries.")
 class SearchResultList(BaseModel):
     results: List[SearchResult] = Field(description="A list of search results.")
 class VerificationResult(BaseModel):
