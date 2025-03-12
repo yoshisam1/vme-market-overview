@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 from tools.llm import llm, llm2
 from tools.tools import pdf_tool, normalizer_tool
 from .parsers import SearchResult, input_parser, summary_parser, search_result_list_parser, verification_parser
@@ -82,7 +83,6 @@ async def summarize_page(state: State):
             "Ensure that at least one of the points is qualitative and one is quantitative. Each point should reflect "
             "significant facts or insights and be concise.\n\n"
             f'"{content}"\n\n'
-            "Please respond using the following structure in valid JSON format:\n"
             f"{summary_parser.get_format_instructions()}"
         )
 
@@ -102,6 +102,8 @@ async def summarize_page(state: State):
     tasks = [summarize(page_data) for page_data in state["extracted_pages"]]
     summarized_pages = await asyncio.gather(*tasks)
 
+    # logging.info(f"Summarized Pages: {summarized_pages}")
+
     return {"summarized_pages": summarized_pages}
 
 async def search_summaries(state: State):
@@ -112,6 +114,8 @@ async def search_summaries(state: State):
         raise ValueError("Query not found.")
     if not summaries:
         raise ValueError("Summaries not found.")
+    
+    random.shuffle(summaries)
 
     # ✅ Ensure document names are included in the summaries
     concatenated_summaries = "\n\n".join(
@@ -128,14 +132,21 @@ async def search_summaries(state: State):
     search_prompt = (
         f"The following are summaries from multiple documents:\n\n"
         f"{concatenated_summaries}\n\n"
-        f"Based on the query: \"{query}\", extract the top 10 relevant points from the summary. "
-        f"Each point should be associated with exactly one document name and page number as its source. "
-        f"Please respond using the following structure in valid JSON format:\n"
-        f"{search_result_list_parser.get_format_instructions()}"
+        f"**Task:** Based on the query: \"{query}\", extract the **top 10 most relevant points** while ensuring:\n"
+        f"**Fair distribution**: Select points from different documents, avoiding dominance by a single document.\n"
+        f"**No duplicates**: If multiple points are highly similar (same meaning, reworded versions), merge them into one.\n"
+        f"**Next Best Selection**: If a point is merged due to similarity, select the next most relevant point from the same document.\n\n"
+        f"Each extracted point must be associated with **exactly one document name and page number** as its source.\n\n"
+        f"{search_result_list_parser.get_format_instructions()}" # This is a PyDantic formatter
     )
+
+    logging.info(f"Search Prompt: {search_prompt}\n\n\n\n\n")
 
     # Use the LLM to perform the search
     response = await llm.ainvoke([{"role": "user", "content": search_prompt}])
+    
+    # It only returns points from the frist document on the list
+    logging.info(f"Search summary response: {response}\n\n\n\n\n")
 
     try:
         # ✅ Parse the response using Pydantic
@@ -154,6 +165,8 @@ async def search_summaries(state: State):
                     "claimed_page": result.claimed_page,
                 }
                 enriched_results.append(result_data)
+        
+        logging.info(f"Polished summary response: {enriched_results}\n\n\n\n\n")
 
         return {"search_results": enriched_results}
 
@@ -164,6 +177,8 @@ async def search_summaries(state: State):
 async def verify_results(state: State):
     search_results = state.get("search_results", [])
     extracted_pages = state.get("extracted_pages", [])
+
+    logging.info(f"Pre-verify results: {search_results}\n\n\n\n\n")
 
     if not search_results:
         raise ValueError("No search results to verify.")
@@ -219,6 +234,8 @@ async def verify_results(state: State):
     tasks = [verify(result) for result in search_results]
     all_verified_points = await asyncio.gather(*tasks)
 
+    logging.info(f"Post-verify: {all_verified_points}\n\n\n\n\n")
+
     # Filter out None values and format the results
     verified_results = [point for point in all_verified_points if point]
 
@@ -230,10 +247,11 @@ async def verify_results(state: State):
         for result in verified_results
     )
 
+    logging.info(f"Verified Results: {formatted_results}\n\n\n\n\n")
 
     return {
         "messages": [
             {"role": "assistant", "content": f"Verified Results:\n\n{formatted_results}"}
         ],
-        "verified_results": verified_results,
+        "verified_results": formatted_results,
     }

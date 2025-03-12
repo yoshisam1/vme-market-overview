@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from graph import process_input, process_pdf, summarize_page, search_summaries, verify_results
 from graph import State
 from tools import llm, pdf_tool
@@ -59,6 +60,8 @@ async def process_query(pdf_paths: list, uploaded_filenames: list[str], user_que
                 if isinstance(last_message, dict) and "content" in last_message:
                     results.append(last_message["content"])
 
+
+    logging.info(f"Final result: {results}\n\n\n\n\n")
     return results
 
 
