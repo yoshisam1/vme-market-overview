@@ -22,15 +22,15 @@ If you're new, follow this **quick guide** to get the best results.
 📄 **Works best on text-heavy PDFs.** The fewer documents & less text, the faster the results.  
 🔄 **If the app crashes**, reload the page & follow the best practices below.  
 🚫 **Avoid number-heavy PDFs** (e.g., financial statements with lots of tables).  
-🚫 **Avoid large-documents** (e.g., documents with page count above 100).
+🚫 **Avoid large-documents** (e.g., documents with page count above 100).  
 📊 **Annual Reports:** To improve accuracy, remove appendices or large data tables before uploading. 
 
 A good prompt should include information of:
 + The industry you are researching
 + The sentiment you wish to create
 
-Example of good prompt:
-Hi, I am currently working on an industry analysis for the LNG industry.
+Example of good prompt:  
+Hi, I am currently working on an industry analysis for the LNG industry.  
 I am trying to give a general overview of both the Global and Indonesia LNG market, with a slight tilt towards positive outlook.
 
 ### **Additional Notes**
